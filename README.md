@@ -97,10 +97,10 @@ who owns it.
 
 | Week | Goal | Owner |
 |---|---|---|
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 4 | Defense | |
+| 1 | Setup: ownership, timeline, and a build that runs `bench` on a provided file | @RalphREE |
+| 2 | Sorting (`qsort_asm`) and Searching (`bsearch_asm`, `gcd_asm`) pass their checks | @AdrianMoser1 (Sorting), @Yomaruichi (Searching) |
+| 3 | Convention and measurement: `sum_range_asm` reentrant, `--hostile` passes, all 36 checks, measurements | @RalphREE |
+| 4 | Defense | All three |
 
 ## Subsystem Ownership
 
@@ -110,9 +110,16 @@ share one. The commit history must agree with this table.
 
 | Subsystem | Owner |
 |---|---|
-| Sorting (`qsort_asm` and its partition) | |
-| Searching (`bsearch_asm`, `gcd_asm`) | |
-| Convention and measurement (`sum_range_asm`, the benchmarks) | |
+| Sorting (`qsort_asm` and its partition) | @AdrianMoser1 |
+| Searching (`bsearch_asm`, `gcd_asm`) | @Yomaruichi |
+| Convention and measurement (`sum_range_asm`, the benchmarks) | @RalphREE |
+
+`gcd_asm` lives in `util.asm` but belongs to Searching, so @Yomaruichi owns it.
+`util.asm` is shared: @Yomaruichi edits only `gcd_asm` and `gcd_depth`, and @RalphREE
+edits only `sum_range_asm`.
+
+Reviews: @Yomaruichi reviews Sorting, @RalphREE reviews Searching, and @AdrianMoser1 reviews
+Convention and measurement.
 
 ## Quirks and Issues
 
