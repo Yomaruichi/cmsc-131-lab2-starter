@@ -76,7 +76,6 @@ segment .text
         extern  _bench_callback
 _gcd_asm:
         enter   0,0
-        pusha
 
         ;
         ; TODO: gcd. Count the calls. Reset gcd_depth at entry, then keep
@@ -86,8 +85,41 @@ _gcd_asm:
         ; returns, so a counter that returns to zero on exit prints 0.
         ;
 
-        popa
-        mov     eax, 0
+        ; Reset per call from c
+        mov dword [_gcd_depth], 0
+
+        push dword [ebp + 12]   ; b
+        push dword [ebp + 8]    ; a
+        call gcd_recursive
+        add esp, 8
+        
+        leave
+        ret
+
+gcd_recursive:
+        enter   0,0
+
+        inc     dword [_gcd_depth]
+
+        mov     eax, [ebp + 8]
+        mov     ecx, [ebp + 12]
+
+        ; Base case: gcd(a, 0) = a
+        cmp     ecx, 0
+        je      .done
+
+        ; Divide a by b, edx recieves a % b
+        cdq
+
+        idiv ecx
+
+        ; Recursive step: gcd(b, a % b)
+        push    edx                             ; remainder
+        push    ecx                             ; b
+        call    gcd_recursive
+        add     esp, 8
+
+.done:
         leave
         ret
 
