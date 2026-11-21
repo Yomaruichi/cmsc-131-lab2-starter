@@ -70,6 +70,30 @@ this activity adds. Keep each part short. Update it when the plan changes.
 The four routines `bench.c` expects and what each one returns. Which
 registers you preserve and why.
 
+#### Registers
+
+All four routines are called from C, so they follow cdecl. The caller
+pushes the arguments right to left, so the first argument is at
+`[ebp+8]`, the second at `[ebp+12]`, and the third at `[ebp+16]`. The
+caller removes them after the call returns. The result goes in `eax`.
+
+C expects `ebx`, `esi`, `edi`, and `ebp` to hold the same values after
+the call as before it. A routine that uses one of them pushes it after
+the prologue and pops it, in reverse order, before `leave`. `ebp` is
+handled by `enter` and `leave`. The routines can change `eax`, `ecx`,
+and `edx` freely, because C saves those itself when it needs them.
+
+`esp` must also be back where it started. Every push has a matching
+pop, and after each call a routine makes, it removes the arguments it
+pushed (`add esp, 8` for two arguments).
+
+The stubs use `pusha` and `popa`. We replace them, because `popa` also
+restores `eax` and so overwrites the return value.
+
+`bench --hostile` checks this. It puts a known value in `ebx`, `esi`,
+and `edi`, calls each routine, and fails if any of them changed or if
+`esp` moved.
+
 ### Solution architecture
 
 A stack frame diagram for one recursive call of `qsort_asm`, showing where
