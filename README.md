@@ -100,6 +100,24 @@ A stack frame diagram for one recursive call of `qsort_asm`, showing where
 the arguments, the return address, saved `ebp`, and the saved registers
 sit. Why `sum_range_asm` is reentrant.
 
+#### Why `sum_range_asm` is reentrant
+
+`sum_range_asm` calls `bench_callback` once, and `bench.c` starts a
+second `sum_range_asm(1, 100)` inside that callback. The first call has
+not finished yet. Both calls must still return the right sum.
+
+They do, because neither call stores anything in `.data` or `.bss`.
+Each call keeps `lo` and `hi` in its own stack frame, at `[ebp+8]` and
+`[ebp+12]`. Each partial sum is in `eax` and is added on the way back
+up the recursion. The second call pushes new frames below the first
+call's frames and removes them before it returns. The first call's
+frames are not changed.
+
+The recursion is in a second routine, `sum_range_recursive`. Only
+`sum_range_asm` calls `bench_callback`, so the callback runs once per
+call from C and not once per level. `bench --reentrancy` reports
+500500 for the outer call, 5050 for the nested call, and 2 callbacks.
+
 ### Measurements
 
 The ratio `bench` reports on `random1000.txt`, `sorted1000.txt`,
@@ -158,4 +176,11 @@ did about it.
 
 ### Quirks
 
-- 
+- `sum_range_asm(2147483647, 2147483647)` could recurse without end.
+  With only the `lo > hi` base case, the routine computes `lo + 1`,
+  which wraps to -2147483648, so `lo > hi` is never true. The routine
+  now stops when `lo == hi` and returns `lo`, so it computes `lo + 1`
+  only when `lo < hi`, where it cannot overflow.
+- `sum_range_asm` recurses once per number in the range, so a very
+  large range uses a lot of stack. Each level uses 16 bytes. The
+  reentrancy check sums 1..1000, which is well within the stack.
