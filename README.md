@@ -184,3 +184,32 @@ did about it.
 - `sum_range_asm` recurses once per number in the range, so a very
   large range uses a lot of stack. Each level uses 16 bytes. The
   reentrancy check sums 1..1000, which is well within the stack.
+
+### Tests added
+
+Two files in `tests/`. `run_tests.sh` runs `--sort` and `--search` on
+every file there, so each file adds two checks.
+
+- `tiny2rev.txt`: two elements in reverse order (`5`, `-3`). The sort
+  must swap them. Moser's `tiny2.txt` is the ordered pair.
+- `negatives.txt`: twelve negative numbers, unsorted, with `-7` three
+  times and `-2147483647` near the low end. It checks duplicates and a
+  range with no zero or positive value. All the values have the sign
+  bit set, so an unsigned compare also orders them correctly.
+  `extremes.txt` is the file that catches an unsigned jump.
+
+`sum_range_asm` is not read from a file, so its edge cases were run
+from a small C driver linked with `util.obj`. Each case also checks
+that `bench_callback` ran exactly once.
+
+| Call | Expected | Result |
+|---|---|---|
+| `sum_range_asm(1, 1000)` | 500500 | pass |
+| `sum_range_asm(5, 4)` (empty range) | 0 | pass |
+| `sum_range_asm(7, 7)` | 7 | pass |
+| `sum_range_asm(-3, 3)` | 0 | pass |
+| `sum_range_asm(-10, -1)` | -55 | pass |
+| `sum_range_asm(0, 0)` | 0 | pass |
+| `sum_range_asm(2147483647, 2147483647)` | 2147483647 | pass |
+| `sum_range_asm(-2147483648, -2147483648)` | -2147483648 | pass |
+| `sum_range_asm(2147483646, 2147483646)` | 2147483646 | pass |
