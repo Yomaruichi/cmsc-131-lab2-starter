@@ -75,6 +75,31 @@ registers you preserve and why.
 A stack frame diagram for one recursive call of `qsort_asm`, showing where
 the arguments, the return address, saved `ebp`, and the saved registers
 sit. Why `sum_range_asm` is reentrant.
+#### Quicksort stack frame
+
+`qsort_asm(arr, n)` starts the sort with `qs_rec(arr, 0, n - 1)` when
+`n >= 2`. Each `qs_rec(arr, lo, hi)` call uses the following frame after
+it saves the registers. The stack grows toward lower addresses.
+
+| Stack slot (high to low) | Contents |
+|---|---|
+| `[ebp+16]` | Upper index `hi` (inclusive) |
+| `[ebp+12]` | Lower index `lo` (inclusive) |
+| `[ebp+8]` | Array pointer `arr` |
+| `[ebp+4]` | Return address pushed by `call` |
+| `[ebp]` | Caller's saved `ebp` |
+| `[ebp-4]` | Saved `ebx` |
+| `[ebp-8]` | Saved `esi` |
+| `[ebp-12]` | Saved `edi` (where `esp` points after the saves) |
+
+For example, the first partition of `[4, 2, 5, 1, 3]` places the pivot
+`3` at index `2`. The left call receives `lo = 0` and `hi = 1`. Its
+saved `esi` holds the parent's pivot index, so the parent can use it again
+to start the right call at `p + 1 = 3`. Each child restores its saved
+registers before returning, and the parent removes the three arguments
+with `add esp, 12`.
+
+Why `sum_range_asm` is reentrant.
 
 ### Measurements
 
