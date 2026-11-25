@@ -82,11 +82,70 @@ _bsearch_asm:
         ret
 
 ; Returns an index or -1 in eax.
+; [ebp + 8]  = arr
+; [ebp + 12] = lo
+; [ebp + 16] = hi
+; [ebp + 20] = key
 bsearch_recursive:
         enter   0,0
 
-        ; Temporary
+        mov     ecx, [ebp + 12]      ; lo
+
+        mov     edx, [ebp + 16]      ; hi
+
+        ; An empty range means the key is absent.
+        cmp     ecx, edx
+        jg      .not_found
+
+        ; mid = lo + (hi - lo) / 2
+        mov     eax, edx
+
+        sub     eax, ecx
+
+        shr     eax, 1
+
+        add     eax, ecx
+
+        ; eax now holds mid.
+
+        ; Read arr[mid]. Each integer occupies four bytes.
+        mov     edx, [ebp + 8]
+
+        mov     edx, [edx + eax*4]
+
+        cmp     edx, [ebp + 20]
+        je      .done
+        jl      .search_right
+
+; arr[mid] > key: search lo through mid - 1.
+.search_left:
+        dec     eax
+
+        push    dword [ebp + 20]     ; key
+        push    eax                 ; hi = mid - 1
+        push    dword [ebp + 12]     ; lo
+        push    dword [ebp + 8]      ; arr
+        call    bsearch_recursive
+        add     esp, 16
+
+        jmp     .done
+
+; arr[mid] < key: search mid + 1 through hi.
+.search_right:
+        inc     eax
+
+        push    dword [ebp + 20]     ; key
+        push    dword [ebp + 16]     ; hi
+        push    eax                 ; lo = mid + 1
+        push    dword [ebp + 8]      ; arr
+        call    bsearch_recursive
+        add     esp, 16
+
+        jmp     .done
+
+.not_found:
         mov     eax, -1
 
+.done:
         leave
         ret
