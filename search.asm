@@ -49,7 +49,6 @@ segment .text
         global  _bsearch_asm
 _bsearch_asm:
         enter   0,0
-        pusha
 
         ;
         ; TODO: search.
@@ -65,7 +64,29 @@ _bsearch_asm:
         ; dividend that cannot be negative.
         ;
 
-        popa
-        mov     eax, 0
+        ; hi index n - 1
+        mov     eax, [ebp + 12]
+
+        dec     eax
+
+        ; bsearch_recursive(arr, lo, hi, key)
+        ; Push arguments right to left.
+        push    dword [ebp + 16]     ; key
+        push    eax                 ; hi
+        push    dword 0             ; lo
+        push    dword [ebp + 8]      ; arr
+        call    bsearch_recursive
+        add     esp, 16
+
+        leave
+        ret
+
+; Returns an index or -1 in eax.
+bsearch_recursive:
+        enter   0,0
+
+        ; Temporary
+        mov     eax, -1
+
         leave
         ret
