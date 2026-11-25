@@ -92,19 +92,72 @@ _gcd_asm:
         ret
 
         global  _sum_range_asm
+;
+; Frame of _sum_range_asm after enter 0,0:
+;
+;       [ebp+12]    hi
+;       [ebp+8]     lo
+;       [ebp+4]     return address into C
+;       [ebp]       caller's ebp
+;
+; This routine uses only eax, ecx, and edx, which cdecl lets it change,
+; so it saves no other register. pusha/popa is not used: popa would
+; restore eax and erase the result.
+;
+; Reentrancy: lo, hi, and every partial sum live in this call's own
+; stack frames or in eax. Nothing is written to .data or .bss. A second
+; call that starts inside bench_callback gets its own frames, so it
+; cannot change the first call's values.
+;
 _sum_range_asm:
         enter   0,0
-        pusha
 
-        ;
-        ; TODO: sum_range. Call bench_callback once, then recurse on
-        ; (lo + 1, hi) and add lo. The base case lo > hi is 0. Put the
-        ; recursion in a second routine that does not call bench_callback.
-        ; Keep every intermediate on the stack. A global counter or
-        ; accumulator here is what breaks reentrancy.
-        ;
+        ; Once per call from C. The recursion below does not call it.
+        call    _bench_callback         ; no arguments, nothing to remove
 
-        popa
-        mov     eax, 0
+        push    dword [ebp+12]          ; hi
+        push    dword [ebp+8]           ; lo
+        call    sum_range_recursive
+        add     esp, 8                  ; remove the two arguments
+
+        leave                           ; result is already in eax
+        ret
+
+;
+; sum_range_recursive(lo, hi): the sum of lo..hi inclusive.
+;
+; Internal routine. It uses the same convention as cdecl: arguments
+; pushed right to left, caller removes them, result in eax, only eax
+; changed. Not global, so C cannot call it.
+;
+;       if lo > hi:  return 0
+;       if lo == hi: return lo
+;       return lo + sum_range_recursive(lo + 1, hi)
+;
+; The lo == hi case stops before lo + 1 is computed. Without it,
+; sum_range_asm(2147483647, 2147483647) would compute lo + 1, which
+; wraps to -2147483648, and the recursion would not stop.
+;
+sum_range_recursive:
+        enter   0,0
+
+        mov     eax, [ebp+8]            ; eax = lo
+        cmp     eax, [ebp+12]           ; signed compare with hi
+        jg      .empty                  ; lo > hi
+        je      .done                   ; lo == hi: the sum is lo
+
+        push    dword [ebp+12]          ; hi
+        inc     eax
+        push    eax                     ; lo + 1, cannot overflow here
+        call    sum_range_recursive
+        add     esp, 8                  ; remove the two arguments
+
+        add     eax, [ebp+8]            ; lo + sum of (lo + 1)..hi
+        jmp     .done
+
+.empty:
+        xor     eax, eax                ; empty range sums to 0
+
+.done:
         leave
         ret
